@@ -1,0 +1,73 @@
+/* 
+    FEM SOLVER FOR 
+        -\nabla(u(x)) = f 
+    WITH BOUNDRY CONDITION 
+        u = z 
+    on 
+        \partial(\omega)   
+    WHERE 
+        \omega = (-1,1) * (-1,1)  , f=1 , z=0
+    Writen By sa.zarrinpour@iasbs.ac.ir
+*/
+
+/* getting the input from the command line : */
+
+include "getARGV.idp"
+int n = getARGV("-n", 1);
+/* setting the prefix folder name for results. */
+
+string PREFIX = "n_"+n+"_on_US_results/";
+/* creating base directory to save the results */
+exec("mkdir "+PREFIX);
+/* macros and inline functions */
+
+macro Grad(u) [dx(u), dy(u)] //
+
+func z = 0;
+
+
+
+//func uexact = (x^2+y^2)^(1/4) * sin(atan(y/x)/2);
+func uexact = -1*(1/4)*((x^2 + y^2)-1);
+
+/* generating the mesh */
+mesh Th = square(n,n);
+
+/* FE space */
+fespace Vh(Th, P2); //P2 conforming triangular FEM
+Vh u, v, f=1;
+
+/* Solve */
+
+solve Poisson(u, v) =  int2d(Th)( Grad(u)' * Grad(v) ) - int2d(Th)( f * v ) + on(1,2,3,4, u=z);
+
+/* plotting the results */
+string solutionpath=PREFIX + "solution.eps";
+string meshpath=PREFIX + "mesh.eps";
+string errorpath=PREFIX + "error.eps";
+
+plot(u, wait=true, ps=solutionpath); 
+plot(Th, wait =true,  ps=meshpath);
+/* plotting the error */
+Vh err = (u - uexact);
+string comment="L2 Error : " + sqrt(int2d(Th)((u - uexact)^2));
+plot(err,cmm=comment, value=true,wait=true , ps=errorpath);
+
+cout <<"L2 Error: " << sqrt(int2d(Th)((u - uexact)^2));
+
+/* Save the results */
+/* mesh informations */
+string path = PREFIX + "Th.msh";
+savemesh(Th,path);
+// gnuplot data file
+{
+    ofstream ff(PREFIX+"data.csv");
+    for (int i = 0; i < Th.nt; i++)
+    {
+        for (int j = 0; j < 3; j++)
+            ff << Th[i][j].x << ","<< Th[i][j].y << "," << u[][Vh(i,j)] << endl;
+
+        ff << Th[i][0].x << "," << Th[i][0].y << "," << u[][Vh(i,0)] <<
+        "\n\n\n";
+    }
+}

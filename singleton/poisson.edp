@@ -1,0 +1,84 @@
+/* 
+    FEM SOLVER FOR 
+        -\nabla(u(x)) = f 
+    WITH BOUNDRY CONDITION 
+        u = z 
+    on 
+        \partial(\omega)   
+    WHERE 
+        \omega = (-1,1) * (-1,1) \ [0,1) , f=1 , z=0
+    Writen By sa.zarrinpour@iasbs.ac.ir
+*/
+
+/* getting the input from the command line : */
+
+include "getARGV.idp"
+int n = getARGV("-n", 1);
+/* setting the prefix folder name for results. */
+
+string PREFIX = "n_"+n+"_results/";
+/* creating base directory to save the results */
+exec("mkdir "+PREFIX);
+/* macros and inline functions */
+
+macro Grad(u) [dx(u), dy(u)] //
+
+func z = 0;
+
+
+
+//func uexact = (x^2+y^2)^(1/4) * sin(atan(y/x)/2);
+func uexact = -1*(1/4)*((x^2 + y^2)-1);
+
+/* generating the domain */
+real d = 0.00001; //width of U-shape
+border L1(t=0, 1-d){x=-1; y=-d-t;}
+border L2(t=0, 1-d){x=-1; y=1-t;}
+border B(t=0, 2){x=-1+t; y=-1;}
+border C1(t=0, 1){x=t-1; y=d;}
+border C2(t=0, 2*d){x=0; y=d-t;}
+border C3(t=0, 1){x=-t; y=-d;}
+border R(t=0, 2){x=1; y=-1+t;}
+border T(t=0, 2){x=1-t; y=1;}
+/* generating the mesh */
+
+mesh Th = buildmesh(L1(n/2) + L2(n/2) + B(n) + C1(n) + C2(3) + C3(n) + R(n) + T(n));
+
+/* FE space */
+fespace Vh(Th, P2); //P2 conforming triangular FEM
+Vh u, v, f=1;
+
+/* Solve */
+
+solve Poisson(u, v) =  int2d(Th)( Grad(u)' * Grad(v) ) - int2d(Th)( f * v ) + on(L1,L2,B,C1,C2,C3,R,T, u=z);
+
+/* plotting the results */
+string solutionpath=PREFIX + "solution.eps";
+string meshpath=PREFIX + "mesh.eps";
+string errorpath=PREFIX + "error.eps";
+
+plot(u, wait=true, ps=solutionpath); 
+plot(Th, wait =true,  ps=meshpath);
+/* plotting the error */
+Vh err = (u - uexact);
+string comment="L2 Error : " + sqrt(int2d(Th)((u - uexact)^2));
+plot(err,cmm=comment, value=true,wait=true , ps=errorpath);
+
+cout <<"L2 Error: " << sqrt(int2d(Th)((u - uexact)^2));
+
+/* Save the results */
+/* mesh informations */
+string path = PREFIX + "Th.msh";
+savemesh(Th,path);
+// gnuplot data file
+{
+    ofstream ff(PREFIX+"data.csv");
+    for (int i = 0; i < Th.nt; i++)
+    {
+        for (int j = 0; j < 3; j++)
+            ff << Th[i][j].x << ","<< Th[i][j].y << "," << u[][Vh(i,j)] << endl;
+
+        ff << Th[i][0].x << "," << Th[i][0].y << "," << u[][Vh(i,0)] <<
+        "\n\n\n";
+    }
+}

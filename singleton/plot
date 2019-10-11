@@ -1,0 +1,39 @@
+# Usage gnuplot -c <path_to_data_to_plot="data.csv"> <path_to_save_the_results="plot.png"> <title="">
+
+### Handling the Inputs from shell
+
+if (!exists("ARG1")) file='data.csv'
+if (!exists("ARG2")) file='plot.png'
+if (exists("ARG3")) set title ARG3 
+
+### Setting needed to read data from csv files :
+
+set datafile separator ","
+
+
+### Plot Setting
+
+set xlabel "x"    
+set ylabel "y"
+set palette rgbformulae 30,31,32
+
+### Flatt the results, equivalent to set the camera angle to top
+
+set pm3d map
+
+
+### NOTE : If you want to see the gnuplot window uncomment next 2 lines
+
+#splot ARG1 w l pal
+#pause -1 "Hit any key to continue\n"
+
+### settings to print the plot in file
+
+set term png
+set output ARG2
+
+### actual printing the plot in the file
+
+splot ARG1 w l pal
+replot
+
